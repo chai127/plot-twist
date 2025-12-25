@@ -1,21 +1,21 @@
-import { useState } from "react"
-import { Send } from "lucide-react" 
+import { useState } from "react";
+import { Send } from "lucide-react";
 
 export default function ChatInput({ onSend }) {
-  const [value, setValue] = useState("")
+  const [value, setValue] = useState("");
 
   const submit = () => {
-    if (!value.trim()) return
-    onSend(value)
-    setValue("")
-  }
+    if (!value.trim()) return;
+    onSend(value);
+    setValue("");
+  };
 
   return (
     <div className="p-4 border-t border-[#333] bg-[#1a1a1a]">
       <div className="relative flex items-center">
         <input
           className="w-full bg-[#111] text-gray-200 rounded-xl px-4 py-3 pr-12 outline-none border border-[#333] focus:border-blue-500 transition-colors placeholder-gray-600 text-sm"
-          placeholder="Ask a math question..."
+          placeholder="Ask a math question... (e.g. Add 2,3 and 4,1)"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submit()}
@@ -28,5 +28,5 @@ export default function ChatInput({ onSend }) {
         </button>
       </div>
     </div>
-  )
+  );
 }
