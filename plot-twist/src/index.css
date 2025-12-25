@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@import "mafs/core.css";
+
+/* 3Blue1Brown Inspired Palette */
+:root {
+  --bg-dark: #111111;       /* Deepest Black */
+  --bg-panel: #1a1a1a;      /* Slightly lighter for panels */
+  --border-color: #333333;  /* Subtle borders */
+  --text-main: #ece6d9;     /* Chalk white */
+  --text-muted: #888888;
+  
+  /* Grant's Colors */
+  --color-blue: #74c0fc;    /* The signature blue */
+  --color-yellow: #fcc419;  /* The signature yellow */
+  --color-red: #ff6b6b;     /* The signature red */
+  --color-green: #51cf66;
+}
+
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: 'Inter', system-ui, sans-serif; /* Clean sans-serif */
+}
+
+/* Custom Range Slider Styling */
+input[type=range] {
+  @apply w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  @apply appearance-none w-4 h-4 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all;
+}
+input[type=range]:hover::-webkit-slider-thumb {
+  @apply scale-110;
+}
