@@ -133,8 +133,8 @@ CRITICAL RULES:
   }
 });
 
-// Catch-all route for frontend routing
-app.get("*", (req, res) => {
+// Catch-all route for frontend routing - must be last
+app.use((req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });
 
