@@ -1,0 +1,16 @@
+{
+  "name": "plot-twist-root",
+  "version": "1.0.0",
+  "description": "Plot Twist - Interactive Math Visualization",
+  "private": true,
+  "scripts": {
+    "install-all": "npm install && cd backend && npm install && cd ../plot-twist && npm install",
+    "build": "cd plot-twist && npm run build",
+    "start": "cd backend && npm start",
+    "dev": "concurrently \"cd backend && npm start\" \"cd plot-twist && npm run dev\"",
+    "postinstall": "cd backend && npm install && cd ../plot-twist && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

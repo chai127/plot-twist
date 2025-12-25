@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+dist/
+build/
+*.log
+.DS_Store
+.vscode/
+.idea/
+plot-twist/dist/
+plot-twist/node_modules/
+backend/node_modules/

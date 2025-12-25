@@ -1,79 +1,143 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
+require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const path = require("path");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
 
-// --- AI SETUP ---
+// Serve static files from the frontend build directory
+const frontendPath = path.join(__dirname, "../plot-twist/dist");
+app.use(express.static(frontendPath));
+
+// --- GEMINI SETUP ---
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ 
-    model: "gemini-3-flash-preview",
-    // This setting helps reduce randomness for structured data
-    generationConfig: { temperature: 0.4 } 
+const model = genAI.getGenerativeModel({
+  model: "gemini-3-flash-preview",
+  generationConfig: {
+    temperature: 0.2,
+    maxOutputTokens: 1500,
+  },
 });
 
-// --- THE LOGIC ---
-app.post('/api/query', async (req, res) => {
-  console.log("📩 User Query:", req.body.query);
-  const { query } = req.body;
+// ---------- HELPERS ----------
+function extractJSON(text) {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error("Invalid JSON from AI");
+  }
+  return JSON.parse(text.slice(start, end + 1));
+}
 
+// ---------- VECTOR ENDPOINT ----------
+app.post("/api/vector", async (req, res) => {
+  const { query } = req.body;
   if (!query) return res.status(400).json({ error: "Query required" });
 
-  const systemPrompt = `
-    You are an API that outputs strictly JSON. You are a highly intelligent Math Tutor specializing in Vectors and Linear Algebra.
-    
-    1. ANALYZE the user's request.
-    2. DETERMINES the intent (type and operation).
-    3. EXTRACTS parameters (vectors, numbers) if provided.
-    4. GENERATES illustrative parameters if the user did NOT provide them (e.g., if they just say "show me addition", you create two nice vectors to demonstrate).
-    5. EXPLAINS the concept in depth using LaTeX for math equations. Use '$' for inline math and '$$' for block equations.
+  const prompt = `
+You are a Vector Math API.
 
-    RETURN ONLY JSON. DO NOT use Markdown code blocks (like \`\`\`json). Just the raw JSON string.
-    
-    The JSON structure must be:
-    {
-      "type": "vector",
-      "operation": "addition" | "subtraction" | "dot_product" | "cross_product" | "projection" | "general_concept",
-      "params": {
-        "a": [x, y],  // Start point or Vector A
-        "b": [x, y]   // End point or Vector B (optional depending on operation)
-      },
-      "explanation": "A long, detailed educational explanation string with LaTeX...",
-      "title": "A short 3-5 word title for the lesson"
-    }
-  `;
+Return ONLY valid JSON in this format:
+{
+  "type": "vector",
+  "operation": "addition | dot_product",
+  "params": { "a": [number, number], "b": [number, number] },
+  "explanation": "Detailed step-by-step LaTeX explanation (2-3 sentences with math formulas)",
+  "intuition": "Clear intuitive explanation of what this operation means (2-3 sentences)",
+  "title": "Short descriptive title"
+}
 
-  const finalPrompt = `${systemPrompt}\n\nUSER QUERY: "${query}"`;
+Rules:
+- Never output anything except JSON
+- Always include both vectors
+- Make explanation detailed with actual math notation
+- Make intuition easy to understand
+`;
 
   try {
-    const result = await model.generateContent(finalPrompt);
-    const response = await result.response;
-    let text = response.text();
+    const result = await model.generateContent(`${prompt}\nUser: ${query}`);
+    const text = result.response.text();
+    const json = extractJSON(text);
 
-    // CLEANUP: Sometimes AI adds markdown wrappers despite instructions. Remove them.
-    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    if (json.type !== "vector") {
+      throw new Error("Invalid vector response");
+    }
 
-    // Parse to ensure it's valid JSON before sending to frontend
-    const jsonResponse = JSON.parse(text);
-
-    console.log("✅ AI Generated Valid JSON");
-    res.json(jsonResponse);
-
-  } catch (error) {
-    console.error("🔥 AI/Parse Error:", error);
-    // Fallback if AI fails to generate strict JSON
-    res.status(500).json({ 
-      error: "AI failed to generate structured lesson", 
-      raw_text: error.message 
-    });
+    res.json(json);
+  } catch (err) {
+    console.error("🔥 VECTOR ERROR:", err.message);
+    res.status(500).json({ error: "Vector generation failed" });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Tutor Engine running on http://localhost:${PORT}`);
+// ---------- FUNCTION ENDPOINT ----------
+app.post("/api/function", async (req, res) => {
+  const { query } = req.body;
+  if (!query) return res.status(400).json({ error: "Query required" });
+
+  const prompt = `
+You are an Expert Math Function API for interactive visualization and learning.
+
+AVAILABLE FUNCTIONS (choose exactly ONE):
+sin, cos, tan, sinh, cosh, tanh, exp, log, abs, sqrt, cbrt, reciprocal, asin, acos
+
+RESPONSE FORMAT - Return ONLY valid JSON, no other text:
+{
+  "type": "function",
+  "operation": "sin | cos | tan | sinh | cosh | tanh | exp | log | abs | sqrt | cbrt | reciprocal | asin | acos",
+  "params": { "x": number },
+  "explanation": "Detailed mathematical explanation with LaTeX (include formula, domain, range, key properties, 3-4 sentences)",
+  "intuition": "Real-world or visual analogy explanation (what does this function represent in nature/physics?, 2-3 sentences)",
+  "title": "Clear short title describing the function"
+}
+
+FUNCTION DESCRIPTIONS FOR CONTEXT:
+- sin/cos/tan: Trigonometric functions from angles
+- sinh/cosh/tanh: Hyperbolic functions (exponential based)
+- exp: Exponential growth (e^x)
+- log: Natural logarithm (only for x > 0)
+- sqrt: Square root (only for x >= 0)
+- cbrt: Cube root (works for all x)
+- abs: Absolute value (distance from zero)
+- reciprocal: 1/x (undefined at 0)
+- asin/acos: Inverse trig functions (domain -1 to 1)
+
+CRITICAL RULES:
+- Output ONLY the JSON object, nothing else
+- NEVER include cube, polynomial, power, derivative, or quadratic functions
+- Always provide accurate domain/range
+- Explain why the function matters
+- Use proper LaTeX for mathematical notation: $formula$ for inline
+- Make explanation suitable for educational visualization
+`;
+
+  try {
+    const result = await model.generateContent(`${prompt}\nUser query: ${query}`);
+    const text = result.response.text();
+    const json = extractJSON(text);
+
+    const ALLOWED = ["sin", "cos", "tan", "sinh", "cosh", "tanh", "exp", "log", "sqrt", "cbrt", "abs", "reciprocal", "asin", "acos"];
+    if (!ALLOWED.includes(json.operation)) {
+      throw new Error(`Unsupported function: ${json.operation}`);
+    }
+
+    res.json(json);
+  } catch (err) {
+    console.error("🔥 FUNCTION ERROR:", err.message);
+    res.status(500).json({ error: "Function generation failed: " + err.message });
+  }
 });
+
+// Catch-all route for frontend routing
+app.get("*", (req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
+});
+
+app.listen(PORT, () =>
+  console.log(`🚀 Tutor Engine running at http://localhost:${PORT}`)
+);

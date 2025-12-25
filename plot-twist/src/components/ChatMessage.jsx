@@ -50,9 +50,9 @@ export default function ChatMessage({ role, text }) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+        className={`max-w-[85%] px-4 py-3 rounded-xl text-sm leading-relaxed ${
           isUser
-            ? "bg-blue-600/90 text-white shadow-lg shadow-blue-900/20 rounded-br-none"
+            ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30 rounded-br-none"
             : "bg-[#252525] text-gray-200 border border-[#333] rounded-bl-none"
         }`}
       >

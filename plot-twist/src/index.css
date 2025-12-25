@@ -1,22 +1,19 @@
 @import "tailwindcss";
-
 @import "mafs/core.css";
 
 /* 3Blue1Brown Inspired Palette */
 :root {
-  --bg-dark: #111111;       /* Deepest Black */
-  --bg-panel: #1a1a1a;      /* Slightly lighter for panels */
-  --border-color: #333333;  /* Subtle borders */
-  --text-main: #ece6d9;     /* Chalk white */
+  --bg-dark: #111111;
+  --bg-panel: #1a1a1a;
+  --border-color: #333333;
+  --text-main: #ece6d9;
   --text-muted: #888888;
-  
-  /* Grant's Colors */
-  --color-blue: #74c0fc;    /* The signature blue */
-  --color-yellow: #fcc419;  /* The signature yellow */
-  --color-red: #ff6b6b;     /* The signature red */
+
+  --color-blue: #74c0fc;
+  --color-yellow: #fcc419;
+  --color-red: #ff6b6b;
   --color-green: #51cf66;
 }
-
 
 html, body, #root {
   height: 100%;
@@ -26,7 +23,8 @@ html, body, #root {
 body {
   background-color: var(--bg-dark);
   color: var(--text-main);
-  font-family: 'Inter', system-ui, sans-serif; /* Clean sans-serif */
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow: auto; /* Allow scrolling if content exceeds */
 }
 
 /* Custom Range Slider Styling */
@@ -38,4 +36,20 @@ input[type=range]::-webkit-slider-thumb {
 }
 input[type=range]:hover::-webkit-slider-thumb {
   @apply scale-110;
+}
+
+/* Panels */
+.sidebar {
+  background-color: var(--bg-panel);
+  border-right: 1px solid var(--border-color);
+  padding: 1.5rem;
+  flex-shrink: 0;
+  overflow-y: auto; /* Scroll if content overflows */
+}
+
+.canvas-container {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: auto; /* Let canvas pan freely */
 }

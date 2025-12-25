@@ -2,7 +2,8 @@ import React from "react";
 import VectorAdditionViz from "./VectorAdditionViz";
 import VectorDotProductViz from "./VectorDotProductViz";
 import FunctionViz from "./FunctionViz"; 
-import VectorControls from "./VectorControls"; 
+import VectorControls from "./VectorControls";
+import FunctionControls from "./FunctionControls";
 
 export default function VisualizationPanel({ config, setVizConfig }) {
   
@@ -14,9 +15,9 @@ export default function VisualizationPanel({ config, setVizConfig }) {
 
     // 2. Vector Modes
     if (config.operation === "dot_product") {
-        return <VectorDotProductViz config={config} />;
+        return <VectorDotProductViz config={config} setConfig={setVizConfig} />;
     }
-    return <VectorAdditionViz config={config} />;
+    return <VectorAdditionViz config={config} setConfig={setVizConfig} />;
   };
 
   // Helper for dynamic title
@@ -27,8 +28,9 @@ export default function VisualizationPanel({ config, setVizConfig }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-[#111] relative h-full">
-      <div className="absolute top-6 left-6 z-10 pointer-events-none">
+    <div className="flex-1 flex flex-col bg-[#111] h-full overflow-hidden">
+      {/* Header - Not overlapping */}
+      <div className="shrink-0 px-6 py-6 border-b border-[#333] bg-[#0a0a0a]">
         <h2 className="text-3xl font-light text-white tracking-tight">
           {getTitle()}
         </h2>
@@ -37,15 +39,17 @@ export default function VisualizationPanel({ config, setVizConfig }) {
         </p>
       </div>
 
-      <div className="flex-1 w-full h-full">
+      {/* Main Visualization - Takes up remaining space */}
+      <div className="flex-1 w-full min-h-0 overflow-hidden">
         {renderViz()}
       </div>
 
-      {/* Only show vector sliders if we are NOT in analysis mode */}
+      {/* Controls - Fixed at bottom */}
+      {config.mode === "analysis" && (
+        <FunctionControls config={config} setVizConfig={setVizConfig} />
+      )}
       {config.mode !== "analysis" && (
-        <div className="z-20">
-          <VectorControls config={config} setVizConfig={setVizConfig} />
-        </div>
+        <VectorControls config={config} setVizConfig={setVizConfig} />
       )}
     </div>
   );

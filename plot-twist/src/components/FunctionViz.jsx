@@ -1,92 +1,144 @@
-import { Mafs, Coordinates, Plot, Point, Line, Text, Theme } from "mafs";
+import React from "react";
+import { Mafs, Coordinates, Plot } from "mafs";
+import { BlockMath, InlineMath } from "react-katex";
 import "mafs/core.css";
+import "katex/dist/katex.min.css";
 
-export default function FunctionViz({ config, setVizConfig }) {
+function FunctionViz({ config }) {
+  if (!config || config.mode !== "analysis") {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-gray-400">
+        <p>Select a function from the chat to visualize</p>
+      </div>
+    );
+  }
+
+  const operation = config.operation;
+  const title = config.title || "Function Visualization";
+  const explanation = config.explanation || "";
+  const intuition = config.intuition || "";
   
-  // --- 1. ROBUST FUNCTION PARSER ---
-  // Converts user strings like "Sine of x" into actual JS functions
-  const getFunction = (funcName) => {
-    // Normalize string: remove spaces, make lowercase to be safe
-    const cleanName = funcName?.toLowerCase().replace(/\s/g, "") || "x^2";
+  // Function transformation parameters
+  const amplitude = config.amplitude ?? 1;
+  const frequency = config.frequency ?? 1;
+  const phase = config.phase ?? 0;
 
-    if (cleanName.includes("sin")) return (x) => Math.sin(x);
-    if (cleanName.includes("cos")) return (x) => Math.cos(x);
-    if (cleanName.includes("tan")) return (x) => Math.tan(x);
-    if (cleanName.includes("cube") || cleanName.includes("x^3")) return (x) => x * x * x;
-    if (cleanName.includes("sq") || cleanName.includes("x^2")) return (x) => x * x;
-    
-    // Default fallback: Linear line y = x
-    return (x) => x;
+  // Helper to safely render LaTeX in the intuition/explanation
+  const renderRichText = (text) => {
+    if (!text) return null;
+    const parts = text.split(/(\$[^$]+\$)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith("$") && part.endsWith("$")) {
+        return <InlineMath key={i}>{part.slice(1, -1)}</InlineMath>;
+      }
+      return part;
+    });
   };
 
-  const f = getFunction(config.func);
-  
-  // Ensure xPoint exists (default to 1.0 if missing)
-  const x = config.xPoint !== undefined ? config.xPoint : 1; 
-  const y = f(x);
-
-  // --- 2. CALCULATE DERIVATIVE (SLOPE) ---
-  // We use a numerical approximation (finite difference method)
-  // Slope = ( f(x + small_step) - f(x) ) / small_step
-  const h = 0.001;
-  const slope = (f(x + h) - f(x)) / h;
-
   return (
-    <div className="h-full w-full bg-[#111]">
-      <Mafs
-        // We set a viewbox that works well for both Trig (small Y) and Parabolas (large Y)
-        viewBox={{ x: [-6, 6], y: [-4, 4] }} 
-        preserveAspectRatio={false}
-        pan={true}
-        zoom={true}
-      >
-        {/* The Grid */}
-        <Coordinates.Cartesian subdivisions={2} />
+    <div className="w-full h-full flex bg-[#0a0a0a] text-white">
+      {/* LEFT: INFO PANEL */}
+      <div className="w-80 bg-[#1a1a1a] border-r border-[#333] overflow-y-auto p-6 space-y-6 shrink-0">
+        <div>
+          <h2 className="text-2xl font-light text-white mb-1 tracking-tight">{title}</h2>
+          <p className="text-xs text-gray-500 font-mono uppercase tracking-widest opacity-70">Function Analysis</p>
+        </div>
 
-        {/* 3. PLOT THE MAIN CURVE */}
-        <Plot.OfX 
-            y={f} 
-            color={Theme.blue} 
-            weight={3} 
-        />
+        {/* Explanation Section */}
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Mathematical Definition</h3>
+          <div className="text-sm text-gray-300 leading-relaxed bg-[#252525] p-3 rounded-lg border border-[#333]">
+            {renderRichText(explanation)}
+          </div>
+        </div>
 
-        {/* 4. THE TANGENT LINE (The Derivative) */}
-        <Line.PointSlope 
-            point={[x, y]} 
-            slope={slope} 
-            color="#fcc419" 
-            weight={2} 
-            opacity={0.8} 
-        />
+        {/* Intuition Section */}
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Intuition</h3>
+          <div className="text-sm text-gray-300 leading-relaxed bg-[#252525] p-3 rounded-lg border border-[#333]">
+            {renderRichText(intuition)}
+          </div>
+        </div>
+      </div>
 
-        {/* 5. DRAGGABLE INTERACTIVE POINT */}
-        <Point
-          x={x}
-          y={y}
-          color="#fcc419"
-          // Crucial: This updates the App state when you drag
-          onMove={(point) => {
-            setVizConfig({ ...config, xPoint: point[0] });
-          }}
-        />
+      {/* RIGHT: THE PLOTTER */}
+      <div className="flex-1 relative bg-[#111] min-h-0">
+        <Mafs viewBox={{ x: [-10, 10], y: [-4, 4] }} preserveAspectRatio={false}>
+          <Coordinates.Cartesian subdivisions={2} opacity={0.15} />
 
-        {/* 6. LIVE LABELS */}
-        
-        {/* Floating Function Label (Top Left) */}
-        <Text x={-5.5} y={3.5} className="text-white text-xl font-mono font-bold">
-          f(x) = {config.func || "x^2"}
-        </Text>
-
-        {/* Live Data next to the point */}
-        <Text x={x + 0.5} y={y + 0.5} className="text-[#fcc419] text-sm font-mono">
-          {`Slope: ${slope.toFixed(2)}`}
-        </Text>
-        
-        <Text x={x + 0.5} y={y + 0.2} className="text-gray-400 text-xs font-mono">
-          {`x: ${x.toFixed(2)}`}
-        </Text>
-
-      </Mafs>
+          {/* Dynamic Plotting based on operation */}
+          <Plot.OfX
+            y={(x) => {
+              let result = 0;
+              const absX = Math.abs(x);
+              
+              try {
+                switch (operation) {
+                  case "sin":
+                    result = amplitude * Math.sin(frequency * x + phase);
+                    break;
+                  case "cos":
+                    result = amplitude * Math.cos(frequency * x + phase);
+                    break;
+                  case "tan": {
+                    // Avoid asymptotes by clamping extreme values
+                    const val = Math.tan(frequency * x + phase);
+                    result = amplitude * (Math.abs(val) > 50 ? NaN : val);
+                    break;
+                  }
+                  case "sinh":
+                    result = amplitude * Math.sinh(frequency * x);
+                    break;
+                  case "cosh":
+                    result = amplitude * Math.cosh(frequency * x / 2);
+                    break;
+                  case "tanh":
+                    result = amplitude * Math.tanh(frequency * x);
+                    break;
+                  case "exp":
+                    // Limit exp to prevent overflow
+                    const expVal = frequency * x;
+                    result = amplitude * (expVal > 100 ? NaN : Math.exp(expVal));
+                    break;
+                  case "log":
+                    result = amplitude * (x > 0 ? Math.log(x * frequency + 1) : NaN);
+                    break;
+                  case "sqrt":
+                    result = amplitude * (x >= 0 ? Math.sqrt(x * frequency) : NaN);
+                    break;
+                  case "cbrt":
+                    result = amplitude * Math.cbrt(x * frequency);
+                    break;
+                  case "abs":
+                    result = amplitude * Math.abs(x * frequency);
+                    break;
+                  case "reciprocal":
+                    result = amplitude * (Math.abs(x) < 0.01 ? NaN : 1 / (x * frequency + 0.1));
+                    break;
+                  case "asin":
+                    const asinVal = x * frequency;
+                    result = amplitude * (Math.abs(asinVal) <= 1 ? Math.asin(asinVal) : NaN);
+                    break;
+                  case "acos":
+                    const acosVal = x * frequency;
+                    result = amplitude * (Math.abs(acosVal) <= 1 ? Math.acos(acosVal) : NaN);
+                    break;
+                  default:
+                    result = 0;
+                }
+              } catch (e) {
+                result = NaN;
+              }
+              
+              return isNaN(result) || !isFinite(result) ? undefined : result;
+            }}
+            color="#3b82f6"
+            weight={3}
+          />
+        </Mafs>
+      </div>
     </div>
   );
 }
+
+export default FunctionViz;
